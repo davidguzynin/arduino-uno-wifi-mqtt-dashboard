@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Arduino Uno Wifi MQTT Dashboard</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+
+    body 
+    { 
+      font-family: Arial,sans-serif; 
+      background: #f9f9f9; 
+    }
+
+    h2 
+    { 
+      font-size: 28px; 
+      color: #333; 
+    }
+    
+    #log 
+    { 
+      font-size: 20px; 
+      line-height: 1.5;
+      white-space: pre-wrap; 
+    }
+
+    .ok 
+    { 
+      color: green; 
+      font-weight: bold; 
+    }
+
+    .error 
+    { 
+      color: red; 
+      font-weight: bold; 
+    }
+
+    .warn 
+    { 
+      color: orange; 
+      font-weight: bold; 
+    }
+
+    .info 
+    { 
+      color: blue; 
+      font-weight: bold; 
+    }
+
+    .msg 
+    { 
+      color: black; 
+      font-weight: bold; 
+    }
+
+  </style>
+</head>
+<body>
+  <h2>Arduino Uno Wifi Data</h2>
+  <div id="log"></div>
+
+  <script>
+    const log = document.getElementById("log");
+    function write(msg, cls="msg") 
+    {
+      const time = new Date().toLocaleTimeString();
+      log.innerHTML += `<div class="${cls}">[${time}] ${msg}</div>`;
+    }
+
+    write("🔗 Starting MQTT client...", "info");
+
+    const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+
+    client.on("connect", () => 
+    {
+      write("✅ Connected to broker", "ok");
+      client.subscribe("test/arduino/dht11/#", (err) => 
+      {
+        if (err) write("Subscription error: " + err, "error");
+        else write("📶 Subscribed to test/arduino/dht11/#", "info");
+      });
+    });
+
+    client.on("message", (topic, message) => 
+    {
+      write(`📩 Message → ${topic}: ${message.toString()}`, "msg");
+    });
+
+    client.on("reconnect", () => write("🔄 Reconnecting...", "warn"));
+    client.on("close", () => write("❌ Connection closed", "error"));
+    client.on("offline", () => write("⚠️ Client offline", "warn"));
+    client.on("error", (err) => write("Error: " + err, "error"));
+
+    setInterval(() => 
+    {
+      if (client.connected) 
+      {
+        client.publish("test/arduino/dht11/ping", "browser alive");
+        write("Ping sent to broker", "info");
+      } else {
+        write("Ping skipped (not connected)", "warn");
+      }
+    }, 15000);
+  </script>
+</body>
+</html>
